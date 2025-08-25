@@ -20,7 +20,7 @@ class DecryptRequest(BaseModel):
 
 @app.get("/")
 def home():
-    return {"message": "🚀 Quantum API is running!"}
+    return {"message": "--Codebreaker-- Qiskit FastAPI is available to demonstrate Quantum Computing by decrypting an encrypted text message"}
 
 @app.post("/decrypt")
 def decrypt(req: DecryptRequest):
