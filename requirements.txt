@@ -1,4 +1,5 @@
 fastapi
 uvicorn
+nest_asyncio
 qiskit
 qiskit-aer
