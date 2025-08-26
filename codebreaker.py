@@ -15,7 +15,7 @@ nest_asyncio.apply()
 # --- FastAPI app ---
 app = FastAPI(title="Codebreaker API", version="1.0")
 
-# Request model
+# Request model.
 class DecryptRequest(BaseModel):
     ciphertext: int
     key: int
