@@ -2,21 +2,30 @@ import nest_asyncio
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import Dict
 
 # Qiskit imports
 from qiskit import QuantumCircuit
-from qiskit_aer.primitives import Sampler
+from qiskit_aer import AerSimulator
+from qiskit.primitives import Sampler
 
-# Patch event loop
+# Patch event loop (important for Jupyter/Colab environments)
 nest_asyncio.apply()
 
 # --- FastAPI app ---
-app = FastAPI()
+app = FastAPI(title="Codebreaker API", version="1.0")
 
 # Request model
 class DecryptRequest(BaseModel):
     ciphertext: int
     key: int
+
+# Response model
+class DecryptResponse(BaseModel):
+    ciphertext: int
+    key: int
+    plaintext: int
+    quantum_result: Dict[str, float]
 
 @app.get("/")
 def home():
@@ -24,13 +33,14 @@ def home():
         "message": "--Codebreaker-- 10-bit Encryption/Decryption with Qiskit Demonstration"
     }
 
-@app.post("/decrypt")
+@app.post("/decrypt", response_model=DecryptResponse)
 def decrypt(req: DecryptRequest):
     """
     Decrypt ciphertext using 10-bit key and
     also run a simple Qiskit quantum circuit for demonstration.
     """
-    # --- Classical decryption ---
+
+    # --- Classical decryption (10-bit space: 0–1023) ---
     plaintext = (req.ciphertext - req.key) % 1024
 
     # --- Quantum demonstration (Hadamard + measurement) ---
@@ -38,14 +48,21 @@ def decrypt(req: DecryptRequest):
     qc.h(0)
     qc.measure(0, 0)
 
+    # Run on AerSimulator with Sampler primitive
+    simulator = AerSimulator()
     sampler = Sampler()
-    result = sampler.run(qc).result()
-    quantum_result = result.quasi_dists[0]
+    result = sampler.run([qc]).result()
 
-    return {
-        "ciphertext": req.ciphertext,
-        "key": req.key,
-        "plaintext": plaintext,
-        "quantum_result": quantum_result
-    }
+    # Convert keys to string for JSON safety
+    quantum_result = {str(k): float(v) for k, v in result.quasi_dists[0].items()}
 
+    return DecryptResponse(
+        ciphertext=req.ciphertext,
+        key=req.key,
+        plaintext=plaintext,
+        quantum_result=quantum_result
+    )
+
+# --- Run Uvicorn if executed directly ---
+if __name__ == "__main__":
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
